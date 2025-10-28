@@ -1,0 +1,172 @@
+#DGIM
+
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class DGIMAlgorithm {
+
+    private final int windowSize;
+    private long currentTimestamp;
+    // Using a TreeMap to store buckets, keyed by size, then a LinkedList for order
+    private final Map<Integer, LinkedList<Bucket>> bucketsBySize;
+
+    public DGIMAlgorithm(int windowSize) {
+        this.windowSize = windowSize;
+        this.currentTimestamp = 0;
+        this.bucketsBySize = new TreeMap<>();
+    }
+
+    public void addBit(int bit) {
+        currentTimestamp++;
+
+        // Remove old buckets outside the window
+        for (LinkedList<Bucket> bucketList : bucketsBySize.values()) {
+            bucketList.removeIf(bucket -> bucket.timestamp <= currentTimestamp - windowSize);
+        }
+
+        if (bit == 1) {
+            // Create a new bucket of size 1
+            Bucket newBucket = new Bucket(1, currentTimestamp);
+            addAndMerge(newBucket);
+        }
+    }
+
+    private void addAndMerge(Bucket newBucket) {
+        int size = newBucket.size;
+        bucketsBySize.computeIfAbsent(size, k -> new LinkedList<>()).add(newBucket);
+
+        // Merge if more than two buckets of the same size
+        while (bucketsBySize.get(size) != null && bucketsBySize.get(size).size() > 2) {
+            LinkedList<Bucket> currentSizeBuckets = bucketsBySize.get(size);
+            Bucket oldest1 = currentSizeBuckets.removeFirst();
+            Bucket oldest2 = currentSizeBuckets.removeFirst();
+
+            Bucket mergedBucket = new Bucket(size * 2, oldest2.timestamp); // Use the timestamp of the rightmost
+            size *= 2; // Update size for next iteration
+            addAndMerge(mergedBucket); // Recursively add and merge the new larger bucket
+        }
+    }
+
+    public int estimateOnes() {
+        int count = 0;
+        boolean firstSmallestBucketHandled = false;
+
+        for (Map.Entry<Integer, LinkedList<Bucket>> entry : bucketsBySize.entrySet()) {
+            int size = entry.getKey();
+            LinkedList<Bucket> bucketList = entry.getValue();
+
+            if (!bucketList.isEmpty()) {
+                // Sum full sizes for all but the oldest of the smallest size
+                for (Bucket bucket : bucketList) {
+                    if (bucket.timestamp > currentTimestamp - windowSize) { // Only count buckets within the window
+                        count += bucket.size;
+                    }
+                }
+                // For the oldest bucket of the smallest size, take half its size
+                if (!firstSmallestBucketHandled) {
+                    Bucket oldestSmallest = bucketList.getFirst();
+                    if (oldestSmallest.timestamp <= currentTimestamp - windowSize) { // If it's partially in the window
+                        count += oldestSmallest.size / 2;
+                    }
+                    firstSmallestBucketHandled = true; // Ensure this only happens once for the overall smallest
+                }
+            }
+        }
+        return count;
+    }
+
+    private static class Bucket {
+        int size;
+        long timestamp;
+
+        public Bucket(int size, long timestamp) {
+            this.size = size;
+            this.timestamp = timestamp;
+        }
+    }
+
+    public static void main(String[] args) {
+        DGIMAlgorithm dgim = new DGIMAlgorithm(10); // Window size of 10
+
+        int[] stream = {1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1};
+
+        for (int bit : stream) {
+            dgim.addBit(bit);
+            System.out.println("Current bit: " + bit + ", Estimated 1s in window: " + dgim.estimateOnes());
+        }
+    }
+}
+
+
+# perform data visualization Using R-
+
+hist(mtcars$mpg,
+     main = "Distribution of Miles per Gallon",
+     xlab = "MPG",
+     col = "lightgreen",
+     border = "black")
+
+barplot(mtcars$cyl,
+        main = "Cylinder Count Bar Plot",
+        xlab = "Car Index",
+        ylab = "Cylinders",
+        col = "orange")
+
+plot(mtcars$mpg, mtcars$hp,
+     main = "Miles per Gallon vs Horsepower",
+     xlab = "Miles per Gallon (mpg)",
+     ylab = "Horsepower (hp)",
+     col = "blue",
+     pch = 19)
+
+#R scripts 
+
+
+addNumbers <- function(a, b) {
+  return(a + b)
+}
+
+result <- addNumbers(5, 7)
+print(result)
+
+
+data <- read.csv("students.csv")
+head(data)
+
+
+print("Hello, R World!")
+x <- 10
+print(x)
+
+
+#Hive Commands 
+
+CREATE DATABASE mydb;
+USE mydb;
+CREATE TABLE students (id INT, name STRING, marks INT);
+INSERT INTO students VALUES (1, 'Ravi', 88);
+SELECT * FROM students;
+
+terminal command - hive -f commands.hql
+
+
+terminal command - hive -e "CREATE DATABASE mydb;
+USE mydb;
+CREATE TABLE students (id INT, name STRING, marks INT);
+INSERT INTO students VALUES (1, 'Sourabh', 90);
+SELECT * FROM students;"
+
+
+
+
+terminal command 
+
+hive 
+
+USE mydb;
+DESCRIBE students;
+
