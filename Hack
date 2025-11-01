@@ -1,172 +1,319 @@
-#DGIM
+#Linear Regression 
+
+# Import libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+# Small dataset
+# X = hours studied
+# y = marks scored
+X = np.array([[1], [2], [3], [4], [5]])   # input
+y = np.array([30, 40, 50, 60, 70])        # output
+
+# Create and train model
+model = LinearRegression()
+model.fit(X, y)
+
+# Predict marks for 6 hours of study
+pred = model.predict([[6]])
+print("Predicted marks for 6 hours:", pred[0])
+
+# Print equation
+print(f"Equation: y = {model.coef_[0]:.2f} * x + {model.intercept_:.2f}")
+
+# Plot data points
+plt.scatter(X, y, color='blue', label='Actual data')
+
+# Plot regression line
+plt.plot(X, model.predict(X), color='red', label='Regression line')
+
+# Highlight prediction
+plt.scatter(6, pred, color='green', s=100, label='Predicted point')
+
+# Labels and title
+plt.xlabel("Hours Studied")
+plt.ylabel("Marks Scored")
+plt.title("Simple Linear Regression Example")
+plt.legend()
+plt.show()
+
+#Logistic Regression
+
+# Import libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+
+# Small dataset
+# X = hours studied
+# y = pass(1) or fail(0)
+X = np.array([[1], [2], [3], [4], [5], [6], [7], [8]])   # input
+y = np.array([0, 0, 0, 0, 1, 1, 1, 1])                   # output
+
+# Create and train model
+model = LogisticRegression()
+model.fit(X, y)
+
+# Predict probability of passing for each hour
+X_test = np.linspace(0, 9, 100).reshape(-1, 1)
+y_prob = model.predict_proba(X_test)[:, 1]
+
+# Predict for a specific value (like 5 hours)
+pred = model.predict([[5]])
+print("Pass or Fail for 5 hours:", "Pass" if pred[0] == 1 else "Fail")
+
+# Plot data
+plt.scatter(X, y, color='blue', label='Actual data')
+
+# Plot the logistic curve
+plt.plot(X_test, y_prob, color='red', label='Logistic curve')
+
+# Labels and title
+plt.xlabel("Hours Studied")
+plt.ylabel("Pass Probability")
+plt.title("Simple Logistic Regression Example")
+plt.legend()
+plt.show()
 
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+#SVM
+# Import libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import svm
 
-public class DGIMAlgorithm {
+# Small dataset
+# X = study hours, sleep hours
+# y = pass(1) or fail(0)
+X = np.array([
+    [1, 2], [2, 3], [3, 3], [4, 5],
+    [6, 5], [7, 8], [8, 6], [9, 8]
+])
+y = np.array([0, 0, 0, 0, 1, 1, 1, 1])
 
-    private final int windowSize;
-    private long currentTimestamp;
-    // Using a TreeMap to store buckets, keyed by size, then a LinkedList for order
-    private final Map<Integer, LinkedList<Bucket>> bucketsBySize;
+# Train SVM model
+model = svm.SVC(kernel='linear', probability=True)
+model.fit(X, y)
 
-    public DGIMAlgorithm(int windowSize) {
-        this.windowSize = windowSize;
-        this.currentTimestamp = 0;
-        this.bucketsBySize = new TreeMap<>();
-    }
+# Plot points
+plt.scatter(X[:, 0], X[:, 1], c=y, cmap='coolwarm', s=80, edgecolors='k')
 
-    public void addBit(int bit) {
-        currentTimestamp++;
+# Draw decision boundary
+ax = plt.gca()
+xlim = ax.get_xlim()
+ylim = ax.get_ylim()
 
-        // Remove old buckets outside the window
-        for (LinkedList<Bucket> bucketList : bucketsBySize.values()) {
-            bucketList.removeIf(bucket -> bucket.timestamp <= currentTimestamp - windowSize);
-        }
+# Create grid
+xx, yy = np.meshgrid(np.linspace(xlim[0], xlim[1], 30),
+                     np.linspace(ylim[0], ylim[1], 30))
+Z = model.decision_function(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
 
-        if (bit == 1) {
-            // Create a new bucket of size 1
-            Bucket newBucket = new Bucket(1, currentTimestamp);
-            addAndMerge(newBucket);
-        }
-    }
+# Plot decision boundary and margins
+plt.contour(xx, yy, Z, colors='k', levels=[-1, 0, 1],
+            linestyles=['--', '-', '--'])
 
-    private void addAndMerge(Bucket newBucket) {
-        int size = newBucket.size;
-        bucketsBySize.computeIfAbsent(size, k -> new LinkedList<>()).add(newBucket);
-
-        // Merge if more than two buckets of the same size
-        while (bucketsBySize.get(size) != null && bucketsBySize.get(size).size() > 2) {
-            LinkedList<Bucket> currentSizeBuckets = bucketsBySize.get(size);
-            Bucket oldest1 = currentSizeBuckets.removeFirst();
-            Bucket oldest2 = currentSizeBuckets.removeFirst();
-
-            Bucket mergedBucket = new Bucket(size * 2, oldest2.timestamp); // Use the timestamp of the rightmost
-            size *= 2; // Update size for next iteration
-            addAndMerge(mergedBucket); // Recursively add and merge the new larger bucket
-        }
-    }
-
-    public int estimateOnes() {
-        int count = 0;
-        boolean firstSmallestBucketHandled = false;
-
-        for (Map.Entry<Integer, LinkedList<Bucket>> entry : bucketsBySize.entrySet()) {
-            int size = entry.getKey();
-            LinkedList<Bucket> bucketList = entry.getValue();
-
-            if (!bucketList.isEmpty()) {
-                // Sum full sizes for all but the oldest of the smallest size
-                for (Bucket bucket : bucketList) {
-                    if (bucket.timestamp > currentTimestamp - windowSize) { // Only count buckets within the window
-                        count += bucket.size;
-                    }
-                }
-                // For the oldest bucket of the smallest size, take half its size
-                if (!firstSmallestBucketHandled) {
-                    Bucket oldestSmallest = bucketList.getFirst();
-                    if (oldestSmallest.timestamp <= currentTimestamp - windowSize) { // If it's partially in the window
-                        count += oldestSmallest.size / 2;
-                    }
-                    firstSmallestBucketHandled = true; // Ensure this only happens once for the overall smallest
-                }
-            }
-        }
-        return count;
-    }
-
-    private static class Bucket {
-        int size;
-        long timestamp;
-
-        public Bucket(int size, long timestamp) {
-            this.size = size;
-            this.timestamp = timestamp;
-        }
-    }
-
-    public static void main(String[] args) {
-        DGIMAlgorithm dgim = new DGIMAlgorithm(10); // Window size of 10
-
-        int[] stream = {1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1};
-
-        for (int bit : stream) {
-            dgim.addBit(bit);
-            System.out.println("Current bit: " + bit + ", Estimated 1s in window: " + dgim.estimateOnes());
-        }
-    }
-}
-
-
-# perform data visualization Using R-
-
-hist(mtcars$mpg,
-     main = "Distribution of Miles per Gallon",
-     xlab = "MPG",
-     col = "lightgreen",
-     border = "black")
-
-barplot(mtcars$cyl,
-        main = "Cylinder Count Bar Plot",
-        xlab = "Car Index",
-        ylab = "Cylinders",
-        col = "orange")
-
-plot(mtcars$mpg, mtcars$hp,
-     main = "Miles per Gallon vs Horsepower",
-     xlab = "Miles per Gallon (mpg)",
-     ylab = "Horsepower (hp)",
-     col = "blue",
-     pch = 19)
-
-#R scripts 
-
-
-addNumbers <- function(a, b) {
-  return(a + b)
-}
-
-result <- addNumbers(5, 7)
-print(result)
-
-
-data <- read.csv("students.csv")
-head(data)
-
-
-print("Hello, R World!")
-x <- 10
-print(x)
-
-
-#Hive Commands 
-
-CREATE DATABASE mydb;
-USE mydb;
-CREATE TABLE students (id INT, name STRING, marks INT);
-INSERT INTO students VALUES (1, 'Ravi', 88);
-SELECT * FROM students;
-
-terminal command - hive -f commands.hql
-
-
-terminal command - hive -e "CREATE DATABASE mydb;
-USE mydb;
-CREATE TABLE students (id INT, name STRING, marks INT);
-INSERT INTO students VALUES (1, 'Sourabh', 90);
-SELECT * FROM students;"
+# Labels and title
+plt.xlabel("Hours Studied")
+plt.ylabel("Hours Slept")
+plt.title("SVM - Pass or Fail Classification")
+plt.show()
 
 
 
 
-terminal command 
+#Bagging 
 
-hive 
+from sklearn.ensemble import BaggingClassifier, RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
-USE mydb;
-DESCRIBE students;
+# Small dataset (Iris)
+X, y = load_iris(return_X_y=True)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+
+# Bagging using Decision Trees
+bag_model = BaggingClassifier(
+    base_estimator=DecisionTreeClassifier(),
+    n_estimators=10,
+    random_state=1
+)
+bag_model.fit(X_train, y_train)
+
+# Accuracy
+y_pred = bag_model.predict(X_test)
+print("🎒 Bagging Accuracy:", accuracy_score(y_test, y_pred))
+
+
+#Boosting 
+
+from sklearn.ensemble import AdaBoostClassifier
+
+# Boosting using simple Decision Trees
+boost_model = AdaBoostClassifier(
+    base_estimator=DecisionTreeClassifier(max_depth=1),
+    n_estimators=10,
+    random_state=1
+)
+boost_model.fit(X_train, y_train)
+
+# Accuracy
+y_pred2 = boost_model.predict(X_test)
+print("⚡ Boosting Accuracy:", accuracy_score(y_test, y_pred2))
+
+
+
+
+#DBSCAN
+
+# Import libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import DBSCAN
+
+# Small dataset (points)
+X = np.array([
+    [1, 2], [2, 2], [2, 3], [8, 7],
+    [8, 8], [25, 80]
+])
+
+# Create DBSCAN model
+# eps = distance for neighborhood
+# min_samples = minimum points to form cluster
+db = DBSCAN(eps=2, min_samples=2)
+labels = db.fit_predict(X)
+
+# Print cluster labels (-1 means noise/outlier)
+print("Cluster labels:", labels)
+
+# Plot clusters
+plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='rainbow', s=100, edgecolors='k')
+plt.title("DBSCAN Clustering Example")
+plt.xlabel("X-axis")
+plt.ylabel("Y-axis")
+plt.show()
+
+#PCA
+
+
+# Import libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.datasets import load_iris
+
+# Load small dataset (Iris)
+X, y = load_iris(return_X_y=True)
+
+# Apply PCA to reduce from 4D → 2D
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X)
+
+# Print explained variance
+print("Explained variance ratio:", pca.explained_variance_ratio_)
+
+# Plot the reduced data
+plt.scatter(X_pca[:, 0], X_pca[:, 1], c=y, cmap='rainbow', s=60, edgecolors='k')
+plt.title("PCA - Dimensionality Reduction (Iris Dataset)")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.show()
+
+
+#CART
+
+# Import libraries
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+import matplotlib.pyplot as plt
+
+# Small dataset (hours studied, hours slept)
+# y = 0 (Fail), 1 (Pass)
+X = np.array([
+    [1, 2],
+    [2, 3],
+    [3, 3],
+    [4, 4],
+    [6, 5],
+    [7, 8],
+    [8, 6],
+    [9, 7]
+])
+y = np.array([0, 0, 0, 0, 1, 1, 1, 1])
+
+# Create and train Decision Tree (CART)
+cart_model = DecisionTreeClassifier(criterion="gini", max_depth=3, random_state=1)
+cart_model.fit(X, y)
+
+# Predict new value
+pred = cart_model.predict([[5, 5]])
+print("Prediction for [5,5]:", "Pass" if pred[0] == 1 else "Fail")
+
+# Plot the tree
+plt.figure(figsize=(10,6))
+plot_tree(cart_model, filled=True, feature_names=["Hours_Study", "Hours_Sleep"], class_names=["Fail","Pass"])
+plt.title("CART Decision Tree Example")
+plt.show()
+
+
+#Multivariate Linear Regression
+
+# Import libraries
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+# Small dataset
+# X = [hours studied, hours slept]
+# y = marks scored
+X = np.array([
+    [2, 9],
+    [1, 5],
+    [3, 6],
+    [4, 8],
+    [5, 10],
+    [6, 8]
+])
+y = np.array([75, 60, 80, 90, 95, 88])
+
+# Train the model
+model = LinearRegression()
+model.fit(X, y)
+
+# Predict marks for 4 hrs study and 7 hrs sleep
+pred = model.predict([[4, 7]])
+print("Predicted marks for [4 hrs study, 7 hrs sleep]:", round(pred[0], 2))
+
+# Show equation
+print("Equation: y =", model.coef_[0], "* Study +", model.coef_[1], "* Sleep +", model.intercept_)
+
+#Graph based Clustering
+
+# Import libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import SpectralClustering
+from sklearn.datasets import make_moons
+
+# Small dataset (two half-moons shape)
+X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+
+# Create and train graph-based clustering model
+model = SpectralClustering(
+    n_clusters=2,          # how many groups we want
+    affinity='nearest_neighbors',  # builds a graph based on nearest neighbors
+    assign_labels='kmeans',
+    random_state=0
+)
+labels = model.fit_predict(X)
+
+# Plot the clusters
+plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='rainbow', s=60, edgecolors='k')
+plt.title("Graph-Based (Spectral) Clustering Example")
+plt.xlabel("X-axis")
+plt.ylabel("Y-axis")
+plt.show()
+
 
